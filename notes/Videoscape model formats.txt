@@ -1,0 +1,17 @@
+Static shapes:
+3DG1 - file magic
+number_of_points - this is the 1-indexed total of all points in the shape
+point_x point_y point_z
+and so on...
+number_of_points point_index_0 ... point_index_n color_index - describes a face. Note that the point indexes count from 0, not one
+and so on...
+0x1a EOF marker
+
+Animated shapes:
+3DAN - file magic
+number_of_points - same as 3DG1
+number_of_frames - total number of frames in this shape, i believe this is also 1-indexed
+[all n points for each frame of the shape's animation are then written out, e.g. if a shape had 10 points and 5 frames there would be 5 sets of 10 points written]
+number_of_points point_index_0 ... point_index_n color_index - same as 3DG1
+and so on...
+0x1a EOF marker (not all have this)

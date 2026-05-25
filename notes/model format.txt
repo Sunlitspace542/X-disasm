@@ -1,4 +1,4 @@
-model header table at 4900
+model header table at $4900
 [00 4A]
 model headers are laid out as such: $4A00
 [00 01 08 4A 17 4A 30 4A]
