@@ -2,3 +2,4 @@ baserom.gb
 baserom.sav
 build/
 videoscape/
+tools/_pycache_/

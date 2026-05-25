@@ -1,0 +1,1 @@
+python tools\videoscape_export.py --outdir videoscape

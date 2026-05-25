@@ -103,7 +103,20 @@ def parse_verts_frame(frame_lines):
 def split_frame_blocks(lines):
     cleaned = [clean_comment(line) for line in lines]
     if not any(line.startswith(".frame") for line in cleaned if line):
-        return [("default", [line for line in cleaned if line])]
+        blocks = []
+        current_block = []
+        for line in cleaned:
+            if not line:
+                continue
+            if line.endswith(":"):
+                continue
+            current_block.append(line)
+            if line == "db vEND":
+                blocks.append(([], current_block))
+                current_block = []
+        if current_block:
+            blocks.append(([], current_block))
+        return blocks
 
     blocks = []
     pending_labels = []
@@ -149,14 +162,23 @@ def parse_model_verts(verts_lines):
             base_points = parse_verts_frame(verts_lines[:i])
             frame_blocks = split_frame_blocks(verts_lines[i + 2 + count :])
             frame_data = {}
+            parsed_frames = []
             for labels, block in frame_blocks:
                 parsed_points = parse_verts_frame(block)
+                parsed_frames.append(parsed_points)
                 for label in labels:
                     frame_data[label] = parsed_points
 
             if len(frame_refs) != count:
                 raise ValueError("frame reference count mismatch")
-            return [base_points + frame_data[ref] for ref in frame_refs]
+
+            if all(ref in frame_data for ref in frame_refs):
+                return [base_points + frame_data[ref] for ref in frame_refs]
+
+            if len(parsed_frames) == len(frame_refs):
+                return [base_points + parsed_frames[idx] for idx in range(len(frame_refs))]
+
+            raise KeyError(frame_refs[0])
 
     return [parse_verts_frame(verts_lines)]
 
@@ -213,20 +235,42 @@ def parse_faces(faces_lines):
         while i < len(faces_lines) and not clean_comment(faces_lines[i]):
             i += 1
         if i >= len(faces_lines):
-            raise ValueError("missing fEdgeGroup for face")
-        groups = parse_macro_args(clean_comment(faces_lines[i]))
-        i += 1
+            raise ValueError("missing face payload for face")
 
-        while i < len(faces_lines) and not clean_comment(faces_lines[i]):
+        face_line = clean_comment(faces_lines[i])
+        if face_line.startswith("fEdgeGroup "):
+            face_indices = parse_macro_args(face_line)
             i += 1
-        if i >= len(faces_lines):
-            raise ValueError("missing fEdgeIdx for face")
-        if not clean_comment(faces_lines[i]).startswith("fEdgeIdx "):
-            raise ValueError(f"expected fEdgeIdx, got {faces_lines[i]!r}")
-        parse_macro_args(clean_comment(faces_lines[i]))
-        i += 1
 
-        faces.append(groups)
+            while i < len(faces_lines) and not clean_comment(faces_lines[i]):
+                i += 1
+            if i >= len(faces_lines):
+                raise ValueError("missing fEdgeIdx for face")
+            if not clean_comment(faces_lines[i]).startswith("fEdgeIdx "):
+                raise ValueError(f"expected fEdgeIdx, got {faces_lines[i]!r}")
+            parse_macro_args(clean_comment(faces_lines[i]))
+            i += 1
+        elif face_line.startswith("db "):
+            face_payload = parse_db_line(face_line)
+            if len(face_payload) == 4:
+                i += 1
+                while i < len(faces_lines) and not clean_comment(faces_lines[i]):
+                    i += 1
+                if i >= len(faces_lines):
+                    raise ValueError("missing face index payload for raw face")
+                if not clean_comment(faces_lines[i]).startswith("db "):
+                    raise ValueError(f"expected raw face index payload, got {faces_lines[i]!r}")
+                face_indices = parse_db_line(faces_lines[i])
+                i += 1
+            elif len(face_payload) >= 2:
+                face_indices = face_payload
+                i += 1
+            else:
+                raise ValueError(f"unsupported raw face payload: {face_payload!r}")
+        else:
+            raise ValueError(f"unsupported face payload: {face_line!r}")
+
+        faces.append(face_indices)
 
     return faces
 
@@ -310,26 +354,41 @@ def write_output(outdir: Path, model_name: str, content: str, animated: bool):
     (outdir / f"{model_name}{extension}").write_text(content, encoding="utf-8")
 
 
-def convert_models(src_path: Path, outdir: Path):
-    source_text = src_path.read_text(encoding="utf-8")
-    for model_name, model_lines in find_models(source_text):
-        sections = extract_sections(model_lines)
-        frame_points = parse_model_verts(sections["verts"])
-        edges = parse_edges(sections["edges"])
-        faces = parse_faces(sections["faces"])
+def resolve_source_paths(source_path: Path | None) -> list[Path]:
+    if source_path is not None:
+        return [source_path]
 
-        animated = len(frame_points) > 1
-        content = build_videoscape([], model_name, frame_points, edges, faces, animated)
-        write_output(outdir, model_name, content, animated)
+    default_sources = [Path("src/bankb.asm"), Path("src/bank1.asm")]
+    return [path for path in default_sources if path.exists()]
+
+
+def convert_models(src_path: Path | None, outdir: Path):
+    seen_models = set()
+    for source_path in resolve_source_paths(src_path):
+        source_text = source_path.read_text(encoding="utf-8")
+        for model_name, model_lines in find_models(source_text):
+            if model_name in seen_models:
+                continue
+            seen_models.add(model_name)
+
+            sections = extract_sections(model_lines)
+            frame_points = parse_model_verts(sections["verts"])
+            edges = parse_edges(sections["edges"])
+            faces = parse_faces(sections["faces"])
+
+            animated = len(frame_points) > 1
+            content = build_videoscape([], model_name, frame_points, edges, faces, animated)
+            write_output(outdir, model_name, content, animated)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Convert X disassembly models to Videoscape text exports")
-    parser.add_argument("source", nargs="?", default="src/bankb.asm", help="Assembly source file to parse")
+    parser.add_argument("source", nargs="?", help="Assembly source file to parse (defaults to bankb + bank1)")
     parser.add_argument("--outdir", default="videoscape", help="Directory for exported Videoscape text files")
     args = parser.parse_args()
 
-    convert_models(Path(args.source), Path(args.outdir))
+    source_path = Path(args.source) if args.source else None
+    convert_models(source_path, Path(args.outdir))
 
 
 if __name__ == "__main__":

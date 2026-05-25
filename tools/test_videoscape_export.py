@@ -1,4 +1,5 @@
 import sys
+import tempfile
 from pathlib import Path
 import unittest
 
@@ -6,10 +7,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from videoscape_export import (
     build_videoscape,
+    convert_models,
     parse_edges,
     parse_faces,
     parse_model_verts,
     parse_verts_frame,
+    resolve_source_paths,
     signed8,
     write_output,
 )
@@ -122,6 +125,17 @@ class VideoscapeExportTests(unittest.TestCase):
                     path.rmdir()
             if outdir.exists():
                 outdir.rmdir()
+
+    def test_resolve_source_paths_defaults_to_bank_b_and_bank_1(self):
+        self.assertEqual([
+            path.as_posix() for path in resolve_source_paths(None)
+        ], ["src/bankb.asm", "src/bank1.asm"])
+
+    def test_convert_models_includes_bank1_models_by_default(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            convert_models(None, Path(tmpdir))
+            self.assertTrue((Path(tmpdir) / "M_Fuel.anm").exists())
+            self.assertTrue((Path(tmpdir) / "M_PowerCube.txt").exists())
 
 
 if __name__ == "__main__":
