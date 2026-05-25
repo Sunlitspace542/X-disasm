@@ -329,6 +329,7 @@ def build_videoscape(
     animated,
     include_edges=True,
     include_faces=True,
+    invert_y=False,
 ):
     output = []
     if animated:
@@ -337,13 +338,18 @@ def build_videoscape(
         output.append(str(len(frames)))
         for frame in frames:
             for x, y, z in frame:
-                output.append(f"{x} {y} {z}")
+                if invert_y:
+                    output.append(f"{x} {-y} {z}")
+                else:
+                    output.append(f"{x} {y} {z}")
     else:
         output.append("3DG1")
         output.append(str(len(frames[0])))
         for x, y, z in frames[0]:
-            output.append(f"{x} {y} {z}")
-
+            if invert_y:
+                output.append(f"{x} {-y} {z}")
+            else:
+                output.append(f"{x} {y} {z}")
     all_faces = []
     if include_edges:
         for edge in edges:
@@ -378,6 +384,7 @@ def convert_models(
     outdir: Path,
     include_edges=True,
     include_faces=True,
+    invert_y=False,
 ):
     seen_models = set()
     for source_path in resolve_source_paths(src_path):
@@ -402,6 +409,7 @@ def convert_models(
                 animated,
                 include_edges=include_edges,
                 include_faces=include_faces,
+                invert_y=invert_y,
             )
             write_output(outdir, model_name, content, animated)
 
@@ -412,6 +420,7 @@ def main():
     parser.add_argument("--outdir", default="videoscape", help="Directory for exported Videoscape text files")
     parser.add_argument("--no-edges", action="store_true", help="Exclude edge faces from the exported output")
     parser.add_argument("--no-faces", action="store_true", help="Exclude polygon faces from the exported output")
+    parser.add_argument("--invert-y", action="store_true", help="Invert Y coordinate of all points")
     args = parser.parse_args()
 
     source_path = Path(args.source) if args.source else None
@@ -420,6 +429,7 @@ def main():
         Path(args.outdir),
         include_edges=not args.no_edges,
         include_faces=not args.no_faces,
+        invert_y=args.invert_y,
     )
 
 

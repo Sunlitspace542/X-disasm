@@ -1,1 +1,1 @@
-python tools\videoscape_export.py --outdir 3dg1
+python tools\videoscape_export.py --outdir 3dg1 --invert-y
