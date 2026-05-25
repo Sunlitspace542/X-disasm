@@ -320,7 +320,16 @@ def find_models(source_text: str):
     return models
 
 
-def build_videoscape(lines, model_name, frames, edges, faces, animated):
+def build_videoscape(
+    lines,
+    model_name,
+    frames,
+    edges,
+    faces,
+    animated,
+    include_edges=True,
+    include_faces=True,
+):
     output = []
     if animated:
         output.append("3DAN")
@@ -336,10 +345,12 @@ def build_videoscape(lines, model_name, frames, edges, faces, animated):
             output.append(f"{x} {y} {z}")
 
     all_faces = []
-    for edge in edges:
-        all_faces.append((10, [edge[0], edge[1]]))
-    for face in faces:
-        all_faces.append((20, face))
+    if include_edges:
+        for edge in edges:
+            all_faces.append((10, [edge[0], edge[1]]))
+    if include_faces:
+        for face in faces:
+            all_faces.append((20, face))
 
     for color, indices in all_faces:
         output.append(f"{len(indices)} {' '.join(str(idx) for idx in indices)} {color}")
@@ -362,7 +373,12 @@ def resolve_source_paths(source_path: Path | None) -> list[Path]:
     return [path for path in default_sources if path.exists()]
 
 
-def convert_models(src_path: Path | None, outdir: Path):
+def convert_models(
+    src_path: Path | None,
+    outdir: Path,
+    include_edges=True,
+    include_faces=True,
+):
     seen_models = set()
     for source_path in resolve_source_paths(src_path):
         source_text = source_path.read_text(encoding="utf-8")
@@ -377,7 +393,16 @@ def convert_models(src_path: Path | None, outdir: Path):
             faces = parse_faces(sections["faces"])
 
             animated = len(frame_points) > 1
-            content = build_videoscape([], model_name, frame_points, edges, faces, animated)
+            content = build_videoscape(
+                [],
+                model_name,
+                frame_points,
+                edges,
+                faces,
+                animated,
+                include_edges=include_edges,
+                include_faces=include_faces,
+            )
             write_output(outdir, model_name, content, animated)
 
 
@@ -385,10 +410,17 @@ def main():
     parser = argparse.ArgumentParser(description="Convert X disassembly models to Videoscape text exports")
     parser.add_argument("source", nargs="?", help="Assembly source file to parse (defaults to bankb + bank1)")
     parser.add_argument("--outdir", default="videoscape", help="Directory for exported Videoscape text files")
+    parser.add_argument("--no-edges", action="store_true", help="Exclude edge faces from the exported output")
+    parser.add_argument("--no-faces", action="store_true", help="Exclude polygon faces from the exported output")
     args = parser.parse_args()
 
     source_path = Path(args.source) if args.source else None
-    convert_models(source_path, Path(args.outdir))
+    convert_models(
+        source_path,
+        Path(args.outdir),
+        include_edges=not args.no_edges,
+        include_faces=not args.no_faces,
+    )
 
 
 if __name__ == "__main__":

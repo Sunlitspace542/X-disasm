@@ -1,6 +1,9 @@
 baserom.gb
 baserom.sav
 build/
+3dg1/
+3dg1_nofaces/
+3dg1_noedges/
 videoscape/
 tools/_pycache_/
 *.pyc

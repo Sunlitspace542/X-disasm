@@ -108,6 +108,24 @@ class VideoscapeExportTests(unittest.TestCase):
         self.assertIn("2 0 1 10", content)
         self.assertIn("2 0 1 20", content)
 
+    def test_build_videoscape_can_exclude_edges_and_faces(self):
+        frame_points = [[(0, 0, 0), (1, 2, 3)]]
+
+        content = build_videoscape(
+            [],
+            "TestModel",
+            frame_points,
+            [(0, 1)],
+            [[0, 1]],
+            False,
+            include_edges=False,
+            include_faces=False,
+        )
+
+        self.assertIn("3DG1", content)
+        self.assertNotIn("10", content)
+        self.assertNotIn("20", content)
+
     def test_write_output_uses_expected_extension_by_animation_type(self):
         outdir = Path(__file__).resolve().parent / "_tmp_videoscape_test"
         try:
