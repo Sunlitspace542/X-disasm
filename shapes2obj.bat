@@ -1,1 +1,1 @@
-python tools\videoscape_to_obj.py --outdir obj --invert-y
+python tools\videoscape_to_obj.py --outdir obj

@@ -1,1 +1,1 @@
-python tools\videoscape_export.py --outdir 3dg1_noedges --no-edges --invert-y
+python tools\videoscape_export.py --outdir 3dg1_noedges --no-edges

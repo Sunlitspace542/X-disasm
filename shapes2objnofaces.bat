@@ -1,1 +1,1 @@
-python tools\videoscape_to_obj.py --outdir obj_nofaces --no-faces --invert-y
+python tools\videoscape_to_obj.py --outdir obj_nofaces --no-faces

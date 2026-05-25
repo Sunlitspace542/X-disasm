@@ -1,1 +1,1 @@
-python tools\videoscape_to_obj.py --outdir obj_noedges --no-edges --invert-y
+python tools\videoscape_to_obj.py --outdir obj_noedges --no-edges
