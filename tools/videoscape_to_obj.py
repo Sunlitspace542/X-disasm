@@ -14,10 +14,13 @@ from videoscape_export import (
 )
 
 
-def build_obj(points, edges, faces, include_edges=True, include_faces=True):
+def build_obj(points, edges, faces, include_edges=True, include_faces=True, invert_y=False):
     lines = []
     for x, y, z in points:
-        lines.append(f"v {x} {y} {z}")
+        if invert_y:
+            lines.append(f"v {x} {-y} {z}")
+        else:
+            lines.append(f"v {x} {y} {z}")
 
     if include_edges:
         for edge in edges:
@@ -31,21 +34,21 @@ def build_obj(points, edges, faces, include_edges=True, include_faces=True):
     return "\n".join(lines) + "\n"
 
 
-def write_obj(outdir: Path, model_name: str, points, edges, faces, include_edges=True, include_faces=True):
+def write_obj(outdir: Path, model_name: str, points, edges, faces, include_edges=True, include_faces=True, invert_y=True):
     outdir.mkdir(parents=True, exist_ok=True)
     target = outdir / f"{model_name}.obj"
     target.write_text(
-        build_obj(points, edges, faces, include_edges=include_edges, include_faces=include_faces),
+        build_obj(points, edges, faces, include_edges=include_edges, include_faces=include_faces, invert_y=invert_y),
         encoding="utf-8",
     )
 
 
-def write_animated_obj(outdir: Path, model_name: str, frames, edges, faces, include_edges=True, include_faces=True):
+def write_animated_obj(outdir: Path, model_name: str, frames, edges, faces, include_edges=True, include_faces=True, invert_y=True):
     anim_dir = outdir / f"{model_name}.anm"
     anim_dir.mkdir(parents=True, exist_ok=True)
     for frame_index, frame in enumerate(frames):
         (anim_dir / f"frame_{frame_index:03d}.obj").write_text(
-            build_obj(frame, edges, faces, include_edges=include_edges, include_faces=include_faces),
+            build_obj(frame, edges, faces, include_edges=include_edges, include_faces=include_faces, invert_y=invert_y),
             encoding="utf-8",
         )
 
@@ -55,6 +58,7 @@ def convert_models_to_obj(
     outdir: Path,
     include_edges=True,
     include_faces=True,
+    invert_y=False,
 ):
     seen_models = set()
     outdir.mkdir(parents=True, exist_ok=True)
@@ -80,6 +84,7 @@ def convert_models_to_obj(
                     faces,
                     include_edges=include_edges,
                     include_faces=include_faces,
+                    invert_y=invert_y,
                 )
             else:
                 write_obj(
@@ -90,6 +95,7 @@ def convert_models_to_obj(
                     faces,
                     include_edges=include_edges,
                     include_faces=include_faces,
+                    invert_y=invert_y,
                 )
 
 
@@ -105,6 +111,7 @@ def main():
     )
     parser.add_argument("--no-edges", action="store_true", help="Exclude edge primitives from the exported OBJ")
     parser.add_argument("--no-faces", action="store_true", help="Exclude face primitives from the exported OBJ")
+    parser.add_argument("--invert-y", action="store_true", help="Invert Y coordinate of all points")
     args = parser.parse_args()
 
     source_path = Path(args.source) if args.source else None
@@ -113,6 +120,7 @@ def main():
         Path(args.outdir),
         include_edges=not args.no_edges,
         include_faces=not args.no_faces,
+        invert_y=args.invert_y,
     )
 
 
