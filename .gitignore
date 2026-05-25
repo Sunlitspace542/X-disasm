@@ -3,3 +3,4 @@ baserom.sav
 build/
 videoscape/
 tools/_pycache_/
+*.pyc
