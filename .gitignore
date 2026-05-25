@@ -4,6 +4,11 @@ build/
 3dg1/
 3dg1_nofaces/
 3dg1_noedges/
+obj/
+obj_nofaces/
+obj_noedges/
 videoscape/
 tools/_pycache_/
 *.pyc
+*.zip
+*.7z
